@@ -2,14 +2,20 @@
 #include <datastore.h>
 
 int main(){
-    set_key("name","Mayank");
-    set_key("lang","C");
 
-    printf("name = %s\n",get_key("name"));
-    printf("lang = %s\n", get_key("lang"));
+    store_init();
 
-    delete_key("lang");
-    print_store();
+    store_set("name", "Mayank");
+    store_set("lang", "C");
+    store_set("project", "KV Store");
+
+    printf("name = %s\n", store_get("name"));
+    printf("lang = %s\n", store_get("lang"));
+
+    store_delete("lang");
+
+    store_print();
+    store_free();
 
     return 0;
 }
