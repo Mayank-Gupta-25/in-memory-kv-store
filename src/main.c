@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <arpa/inet.h>
 
 #include <datastore.h>
@@ -73,16 +74,23 @@ void handle_client(int client_fd){
     close(client_fd);
 }
 
+void* client_thread(void* arg) {
+    int client_fd = *(int*)arg;
+    free(arg);
+    handle_client(client_fd);
+    return NULL;
+}
+
 int main(){
 
-    int server_fd, client_fd;
+    int server_fd;
     struct sockaddr_in address ;
-    int addrlen = sizeof(address);
+    socklen_t addrlen = sizeof(address);
     
     store_init();
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd == -1) {
+    if (server_fd < 0 ) {
         perror("socket");
         exit(1);
     }
@@ -97,22 +105,28 @@ int main(){
         exit(1);
     }
 
-
-    if (listen(server_fd, 5) < 0) {
+    if (listen(server_fd, 10) < 0) {
         perror("listen");
         exit(1);
     }
 
     printf("KV Store listening on port %d...\n", PORT);
 
-    client_fd = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
-    if (client_fd < 0) {
-        perror("accept");
-        exit(1);
+    while(1){
+        int* client_fd = malloc(sizeof(int));
+        *client_fd = accept(server_fd, (struct sockaddr*)&address, &addrlen);
+
+        if (client_fd < 0) {
+            perror("accept");
+            free(client_fd);
+            exit(1);
+        }
+
+        pthread_t tid;
+        pthread_create(&tid, NULL,client_thread, client_fd);
+        pthread_detach(tid); 
     }
 
-    printf("Client connected\n");
-    handle_client(client_fd);
 
     close(server_fd);
     store_free();
